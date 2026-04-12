@@ -1,0 +1,327 @@
+COMPLAINT
+
+package com.example.complaintsystem.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity
+public class Complaint {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String village;
+    private String complaint;
+    private String status = "Pending";
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getVillage() {
+        return village;
+    }
+
+    public String getComplaint() {
+        return complaint;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setVillage(String village) {
+        this.village = village;
+    }
+
+    public void setComplaint(String complaint) {
+        this.complaint = complaint;
+    }
+}
+        
+        APP.JS 
+        
+import React, { useState } from "react";
+import Login from "./pages/Login";
+import CitizenDashboard from "./pages/CitizenDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+
+function App() {
+
+  const [role, setRole] = useState("");
+
+  if(role === "citizen") return <CitizenDashboard />;
+  if(role === "admin") return <AdminDashboard />;
+
+  return <Login setRole={setRole} />;
+}
+
+export default App; 
+
+        LOGIN.JS
+
+import React, { useState } from "react";
+import "../App.css";
+
+function Login({ setRole }) {
+
+  const [username, setUsername] = useState("");
+  const [confirmUsername, setConfirmUsername] = useState("");
+
+  const handleLogin = () => {
+    if(username !== confirmUsername){
+      alert("Username does not match!");
+      return;
+    }
+
+    if(username === "admin"){
+      setRole("admin");
+    } else {
+      setRole("citizen");
+    }
+  };
+
+  return (
+    <div className="login-container">
+      <div className="login-box">
+
+        <h2>Login to Complaint Portal</h2>
+
+        <input
+          placeholder="Enter Username"
+          onChange={(e)=>setUsername(e.target.value)}
+        />
+
+        <input
+          placeholder="Confirm Username"
+          onChange={(e)=>setConfirmUsername(e.target.value)}
+        />
+
+        <button onClick={handleLogin}>Login</button>
+
+      </div>
+    </div>
+  );
+}
+
+export default Login;
+
+ COMPLAINTDASHBOARD.JS
+
+        
+import React, { useEffect, useState } from "react";
+import "../App.css";
+
+function AdminDashboard(){
+
+  const [complaints,setComplaints] = useState([]);
+
+  const fetchComplaints = ()=>{
+    fetch("http://127.0.0.1:8080/complaints")
+    .then(res=>res.json())
+    .then(data=>setComplaints(data));
+  };
+
+  useEffect(()=>{
+    fetchComplaints();
+  },[]);
+
+  const updateStatus = async (id,status)=>{
+    await fetch(`http://127.0.0.1:8080/complaints/update/${id}?status=${status}`,{
+      method:"PUT"
+    });
+
+    fetchComplaints();
+  };
+
+  return(
+    <div className="dashboard">
+
+      <h1>Admin Dashboard</h1>
+
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Village</th>
+            <th>Complaint</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {complaints.map(c=>(
+            <tr key={c.id}>
+              <td>{c.id}</td>
+              <td>{c.name}</td>
+              <td>{c.village}</td>
+              <td>{c.complaint}</td>
+              <td>{c.status}</td>
+              <td>
+                <button onClick={()=>updateStatus(c.id,"Resolved")}>Resolve</button>
+                <button onClick={()=>updateStatus(c.id,"Pending")}>Pending</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+
+      </table>
+
+    </div>
+  );
+}
+
+export default AdminDashboard;
+
+              ADMINDASHBOARD.JS
+
+import React, { useState, useEffect } from "react";
+import "../App.css";
+
+function CitizenDashboard(){
+
+  const [name,setName] = useState("");
+  const [village,setVillage] = useState("");
+  const [complaint,setComplaint] = useState("");
+  const [complaints,setComplaints] = useState([]);
+
+  const fetchComplaints = ()=>{
+    fetch("http://127.0.0.1:8080/complaints")
+    .then(res=>res.json())
+    .then(data=>setComplaints(data));
+  };
+
+  useEffect(()=>{
+    fetchComplaints();
+  },[]);
+
+  const submitComplaint = async (e)=>{
+    e.preventDefault();
+
+    const data = {name,village,complaint};
+
+    await fetch("http://127.0.0.1:8080/complaints/addComplaint",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify(data)
+    });
+
+    alert("Complaint Submitted Successfully");
+
+    setName("");
+    setVillage("");
+    setComplaint("");
+
+    fetchComplaints();  // ✅ THIS FIXES YOUR MAIN PROBLEM
+  };
+
+  return(
+    <div className="dashboard">
+
+      <h1>Submit Your Complaint</h1>
+
+      <form onSubmit={submitComplaint}>
+
+        <input placeholder="Name" value={name} onChange={e=>setName(e.target.value)} />
+        <input placeholder="Village" value={village} onChange={e=>setVillage(e.target.value)} />
+        <textarea placeholder="Complaint" value={complaint} onChange={e=>setComplaint(e.target.value)} />
+
+        <button type="submit">Submit Complaint</button>
+
+      </form>
+
+      <h2>Complaint Status</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Village</th>
+            <th>Complaint</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {complaints.map(c=>(
+            <tr key={c.id}>
+              <td>{c.id}</td>
+              <td>{c.name}</td>
+              <td>{c.village}</td>
+              <td>{c.complaint}</td>
+              <td>{c.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+    </div>
+  );
+}
+
+export default CitizenDashboard;
+
+              HOME.JS
+
+              import React from "react";
+import { useNavigate } from "react-router-dom";
+
+function Home() {
+
+const navigate = useNavigate();
+
+return(
+<div style={{
+height:"100vh",
+backgroundImage:"url('https://i.imgur.com/6Iej2c3.jpg')",
+backgroundSize:"cover",
+display:"flex",
+flexDirection:"column",
+justifyContent:"center",
+alignItems:"center",
+color:"white"
+}}>
+
+<h1>Smart Village Complaint Portal</h1>
+<p>Raise Your Concerns, Improve Our Village!</p>
+
+<button 
+className="btn btn-success mt-3"
+onClick={()=>navigate("/login")}
+>
+Raise Complaint
+</button>
+
+</div>
+);
+}
+
+export default Home;
+
+        COMPLAINTSYSTEMAPPLICATION.JAVA
+
+package com.example.complaintsystem;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class ComplaintsystemApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(ComplaintsystemApplication.class, args);
+	}
+
+}
